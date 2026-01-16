@@ -1,0 +1,194 @@
+╔══════════════════════════════════════════════════════════╗
+║  VALIDADOR DE MIGRAÇÃO 003: PEOPLE → COORDINATIONS      ║
+╚══════════════════════════════════════════════════════════╝
+
+
+============================================================
+1. VERIFICANDO ESTRUTURA DA TABELA PEOPLE
+============================================================
+
+┌─────────────────┬───────────┬─────────────┐
+│  column_name    │ data_type │ is_nullable │
+├─────────────────┼───────────┼─────────────┤
+│ id              │ text      │ NO          │
+│ name            │ text      │ NO          │
+│ role            │ varchar   │ YES         │
+│ area_id         │ text      │ YES         │ ← Será removida
+│ email           │ varchar   │ YES         │
+└─────────────────┴───────────┴─────────────┘
+
+
+============================================================
+2. VERIFICANDO TABELA COORDINATIONS
+============================================================
+
+✓ Tabela coordinations existe com 4 registros
+
+┌──────────────┬─────────────────────┐
+│      id      │        name         │
+├──────────────┼─────────────────────┤
+│ coord-data   │ Dados e Analytics   │
+│ coord-dev    │ Desenvolvimento     │
+│ coord-infra  │ Infraestrutura      │
+│ coord-sec    │ Segurança           │
+└──────────────┴─────────────────────┘
+
+
+============================================================
+3. VERIFICANDO DADOS DE PESSOAS
+============================================================
+
+Total de pessoas na amostra: 10
+
+┌───────────────┬─────────────────┬───────────┬──────────────┬──────────────────────┐
+│      id       │      name       │   role    │   area_id    │        email         │
+├───────────────┼─────────────────┼───────────┼──────────────┼──────────────────────┤
+│ person-001    │ Ana Silva       │ Analista  │ coord-dev    │ ana@empresa.com      │
+│ person-002    │ Bruno Costa     │ Dev       │ coord-dev    │ bruno@empresa.com    │
+│ person-003    │ Carla Mendes    │ DevOps    │ coord-infra  │ carla@empresa.com    │
+│ person-004    │ Diego Santos    │ Analista  │ coord-data   │ diego@empresa.com    │
+│ person-005    │ Elena Rocha     │ Dev       │ coord-dev    │ elena@empresa.com    │
+│ person-006    │ Felipe Lima     │ Security  │ coord-sec    │ felipe@empresa.com   │
+│ person-007    │ Gabriela Souza  │ Dev       │ coord-dev    │ gabriela@empresa.com │
+│ person-008    │ Henrique Alves  │ Analista  │ coord-data   │ henrique@empresa.com │
+│ person-009    │ Isabela Martins │ DevOps    │ coord-infra  │ isabela@empresa.com  │
+│ person-010    │ João Pedro      │ Dev       │ coord-dev    │ joao@empresa.com     │
+└───────────────┴─────────────────┴───────────┴──────────────┴──────────────────────┘
+
+
+============================================================
+4. VERIFICANDO REFERÊNCIAS ÓRFÃS
+============================================================
+
+✓ Nenhuma referência órfã encontrada
+
+
+============================================================
+5. DISTRIBUIÇÃO DE PESSOAS POR AREA/COORDENAÇÃO
+============================================================
+
+┌──────────────┬────────────┐
+│   area_id    │ quantidade │
+├──────────────┼────────────┤
+│ coord-dev    │     5      │
+│ coord-infra  │     2      │
+│ coord-data   │     2      │
+│ coord-sec    │     1      │
+└──────────────┴────────────┘
+
+
+============================================================
+6. SIMULANDO MIGRAÇÃO (SEM EXECUTAR)
+============================================================
+
+Testando se a migração seria bem-sucedida...
+→ Adicionaria coluna coordination_id
+→ Copiaria 10 registros de area_id → coordination_id
+→ Adicionaria FK constraint para coordinations
+→ Removeria coluna area_id
+→ Criaria índice idx_people_coordination_id
+
+✓ Simulação concluída com sucesso!
+A migração pode ser executada com segurança.
+
+
+============================================================
+7. COMANDOS SQL DA MIGRAÇÃO
+============================================================
+
+Conteúdo da migração (resumo):
+
+ALTER TABLE people
+ADD COLUMN coordination_id TEXT;
+
+UPDATE people
+SET coordination_id = area_id
+WHERE area_id IS NOT NULL;
+
+ALTER TABLE people
+ADD CONSTRAINT fk_people_coordination
+FOREIGN KEY (coordination_id) REFERENCES coordinations(id) ON DELETE SET NULL;
+
+ALTER TABLE people
+DROP COLUMN area_id;
+
+CREATE INDEX idx_people_coordination_id ON people(coordination_id);
+
+
+============================================================
+RELATÓRIO FINAL DE VALIDAÇÃO
+============================================================
+
+Status dos checks:
+
+✓ Estrutura da tabela people
+✓ Tabela coordinations existe
+✓ Sem referências órfãs
+✓ Simulação bem-sucedida
+
+
+═══════════════════════════════════════════════════════════
+✓ TODOS OS CHECKS PASSARAM!
+═══════════════════════════════════════════════════════════
+
+Você pode executar a migração com segurança:
+psql $DATABASE_URL -f server/migrations/003_link_people_to_coordinations.sql
+
+
+================================================================================
+EXEMPLO DE CENÁRIO COM ERRO (para referência)
+================================================================================
+
+Se houvesse problemas, você veria algo assim:
+
+============================================================
+4. VERIFICANDO REFERÊNCIAS ÓRFÃS
+============================================================
+
+✗ ATENÇÃO: 2 pessoas com area_id inválida!
+
+┌────────────┬──────────────┬──────────────────┐
+│     id     │     name     │     area_id      │
+├────────────┼──────────────┼──────────────────┤
+│ person-x1  │ Teste User 1 │ area-nao-existe  │ ← ERRO!
+│ person-x2  │ Teste User 2 │ coord-deletada   │ ← ERRO!
+└────────────┴──────────────┴──────────────────┘
+
+
+============================================================
+RELATÓRIO FINAL DE VALIDAÇÃO
+============================================================
+
+Status dos checks:
+
+✓ Estrutura da tabela people
+✓ Tabela coordinations existe
+✗ Sem referências órfãs                           ← FALHOU
+✗ Simulação bem-sucedida                          ← FALHOU
+
+
+═══════════════════════════════════════════════════════════
+✗ ALGUNS CHECKS FALHARAM!
+═══════════════════════════════════════════════════════════
+
+NÃO execute a migração ainda. Resolva os problemas acima primeiro.
+
+
+SOLUÇÕES SUGERIDAS:
+
+1. Corrigir referências órfãs:
+
+   -- Ver quais pessoas estão órfãs
+   SELECT id, name, area_id FROM people
+   WHERE area_id NOT IN (SELECT id FROM coordinations);
+
+   -- Opção A: Setar como NULL
+   UPDATE people SET area_id = NULL WHERE area_id = 'area-nao-existe';
+
+   -- Opção B: Vincular a coordenação válida
+   UPDATE people SET area_id = 'coord-dev' WHERE area_id = 'area-nao-existe';
+
+2. Reexecutar validação:
+   node server/migrations/validate_migration.js
+
+================================================================================

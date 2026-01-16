@@ -1,0 +1,7 @@
+{
+  "name": "Copy of GDD 2.0 testes",
+  "description": "A comprehensive Demand Management System 2.0 featuring consolidated dashboards, AI-powered insights via Gemini, and granular filtering by Person and Area.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
