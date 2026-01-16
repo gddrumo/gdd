@@ -1,28 +1,24 @@
 const { Pool } = require('pg');
-const path = require('path');
+require('dotenv').config();
 
-// Carrega .env APENAS para ambiente local.
-// Em Cloud Run não faz diferença se não existir o arquivo.
-require('dotenv').config({
-  path: path.join(__dirname, '.env'),
-  // se você preferir manter o .env na raiz do projeto:
-  // path: path.join(__dirname, '..', '.env'),
-});
-
-// Uma única variável de ambiente com a connection string completa.
-// Exemplo produção (Cloud SQL via Unix socket):
-// postgresql://gdd_user:SENHA@/gdd_db?host=/cloudsql/PROJETO:REGIAO:gdd2-sql
-const connectionString = process.env.DB_CONNECTION_STRING;
+// Tenta pegar a variável padrão (DATABASE_URL) ou a específica (DB_CONNECTION_STRING)
+const connectionString = process.env.DATABASE_URL || process.env.DB_CONNECTION_STRING;
 
 if (!connectionString) {
-  console.error('[DB] ERRO: DB_CONNECTION_STRING não definida. Verifique:');
-  console.error('- Em desenvolvimento local: arquivo .env ou variável do terminal');
-  console.error('- Em produção (Cloud Run): variável de ambiente DB_CONNECTION_STRING');
-  throw new Error('DB_CONNECTION_STRING ausente');
+  console.error('[DB] ERRO CRÍTICO: Nenhuma string de conexão encontrada.');
+  console.error('Verifique se a variável DATABASE_URL está definida nas configurações da Vercel.');
+  throw new Error('DATABASE_URL ausente');
 }
 
 console.log('[DB] Inicializando Pool de conexões PostgreSQL...');
-const pool = new Pool({ connectionString });
+
+const pool = new Pool({
+  connectionString,
+  // IMPORTANTE: Supabase exige SSL habilitado
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 pool.on('error', (err) => {
   console.error('[DB] Erro inesperado no pool', err);
