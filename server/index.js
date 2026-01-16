@@ -1,3 +1,8 @@
+// ========================================
+// 1. IMPORTANTE: Carregar variáveis de ambiente (para uso local)
+// ========================================
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -12,6 +17,8 @@ const PORT = process.env.PORT || 8080;
 // ========================================
 const corsOptions = {
   origin: function (origin, callback) {
+    // Permite qualquer origem (seguro para APIs públicas ou SVGs)
+    // Se quiser restringir, coloque a lógica aqui
     callback(null, true);
   },
   credentials: true,
@@ -33,7 +40,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ========================================
 // MIDDLEWARE: ANTI-CACHE PARA APIS
 // ========================================
-// Garante que respostas de API nunca sejam cacheadas
 app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
   res.setHeader('Pragma', 'no-cache');
@@ -96,7 +102,6 @@ if (frontendExists) {
 // HELPERS
 // ========================================
 
-// Demand -> formato que o front espera
 function mapRowToDemand(row) {
   return {
     id: row.id,
@@ -144,7 +149,7 @@ const mapPersonRow = (row) => ({
   coordinationId: row.coordination_id,
   email: row.email || '',
 });
-// Converte IDs vindos do front para integer ou null
+
 function toDbId(value) {
   if (value === undefined || value === null || value === '') return null;
   const num = Number(value);
@@ -163,6 +168,8 @@ app.get('/api/health', async (req, res) => {
       environment: process.env.NODE_ENV || 'development',
       port: PORT,
       dbConnected: true,
+      // Debug seguro: mostra se a variável existe sem mostrar a senha
+      dbUrlExists: !!process.env.DATABASE_URL
     });
   } catch (err) {
     console.error('[HEALTH] Erro ao conectar no banco:', err);
@@ -195,7 +202,7 @@ CREATE TABLE areas (
   description TEXT DEFAULT ''
 );
 
--- Create coordinations table with TEXT ids (Technical Coordinations)
+-- Create coordinations table with TEXT ids
 CREATE TABLE coordinations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -217,7 +224,7 @@ CREATE TABLE people (
   email TEXT DEFAULT ''
 );
 
--- Create sla_configs table (unified name)
+-- Create sla_configs table
 CREATE TABLE sla_configs (
   id SERIAL PRIMARY KEY,
   category_id TEXT REFERENCES categories(id) ON DELETE CASCADE,
@@ -261,7 +268,6 @@ INSERT INTO sla_configs (category_id, complexity, sla_hours) VALUES
   try {
     await pool.query(migrationSQL);
 
-    // Verify tables
     const result = await pool.query(`
       SELECT table_name
       FROM information_schema.tables
@@ -378,7 +384,6 @@ app.post('/api/demands', async (req, res) => {
   const demand = req.body;
   console.log('[POST /api/demands] Criando demanda:', demand.id);
 
-  // converte IDs para integer ou null
   const dbPersonId = toDbId(demand.personId);
   const dbAreaId = toDbId(demand.areaId);
   const dbRequesterAreaId = toDbId(demand.requesterAreaId);
@@ -434,7 +439,6 @@ app.post('/api/demands', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar demanda', details: err.message });
   }
 });
-
 
 app.put('/api/demands/:id', async (req, res) => {
   const { id } = req.params;
@@ -497,7 +501,6 @@ app.put('/api/demands/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar demanda', details: err.message });
   }
 });
-
 
 app.delete('/api/demands/:id', async (req, res) => {
   const { id } = req.params;
@@ -645,8 +648,6 @@ app.delete('/api/coordinations/:id', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { profileType, password } = req.body;
 
-  // Por enquanto, manter a mesma lógica, mas movida para o backend
-  // TODO: Implementar auth real com hash de senhas e JWT
   const validCredentials = {
     'GESTAO': 'rumo@2026',
     'TIME': 'rumo@2030'
@@ -977,4 +978,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
+// O segundo "module.exports = app;" que existia aqui embaixo foi removido.
