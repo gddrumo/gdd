@@ -18,5 +18,11 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
-  }
+  },
+  "dependencies": {
+  "cors": "^2.8.5",
+  "dotenv": "^16.x.x",
+  "express": "^4.x.x",
+  "pg": "^8.x.x"
+}
 }
